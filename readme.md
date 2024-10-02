@@ -74,11 +74,7 @@ python run.py
 ---
 ## Usage instructions
 
-Enter Subject ID:
-
-Input your subject_ID (e.g., 001).
-Specify DICOM Source
-Specify data processing directory
+Input Subject Id, C2 Path, Dicom Source
 
 Provide the path obtained from the findsession command in the Dicom Source field.
 Ensure there are no extra spaces or line breaks.
