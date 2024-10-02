@@ -1,6 +1,11 @@
 # Diffusion MRI Pre-processing Pipeline
 
-This repository contains a comprehensive pipeline for preprocessing diffusion MRI data. The instructions include setting up the environment, processing the data, and generating the final outputs.
+This repository contains a comprehensive pipeline for preprocessing diffusion MRI data. 
+
+<img width="771" alt="image" src="https://github.com/user-attachments/assets/de90d5e8-03b0-4e97-b7bc-ef2e6863b328">
+
+
+The instructions include setting up the environment, processing the data, and generating the final outputs.
 
 ## Table of Contents
 
