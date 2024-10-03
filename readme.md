@@ -60,10 +60,12 @@ chmod +x Miniforge3-Linux-x86_64.sh
 # Initialize conda
 {your_chosen_directory}/conda init
 
-# Install necessary Python packages
-conda install python=3.12
+# Create python environment
+conda install python3.12
 conda create --name envPy312 python=3.12
 conda activate envPy312
+
+# Install necessary Python packages
 pip install numpy nibabel dcm2bids dcm2niix
 ```
 ---
