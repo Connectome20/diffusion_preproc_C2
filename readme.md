@@ -61,7 +61,10 @@ chmod +x Miniforge3-Linux-x86_64.sh
 {your_chosen_directory}/conda init
 
 # Install necessary Python packages
-pip install requirement.txt
+conda install python=3.12
+conda create --name envPy312 python=3.12
+conda activate envPy312
+pip install numpy nibabel dcm2bids dcm2niix
 ```
 ---
 ## Running the Pre-processing GUI
