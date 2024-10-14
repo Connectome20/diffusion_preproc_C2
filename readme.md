@@ -97,6 +97,7 @@ Click through the processing steps in order:
 - **Combined Eddy GNC Interpolation** (approx. 3 hours)
 - **Generate Noise Map from MP-PCA** (the output file will be necessary for SANDI diffusion model-fitting)
 - **Write Output to derivative/processed_dwi folder**
+- **run FreeSurfer recon-all**
 
 **Additional Notes**
 
