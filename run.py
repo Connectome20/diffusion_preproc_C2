@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[ ]:
 
 
 import sys
@@ -46,15 +46,24 @@ def update_paths(*args):
     # Get the c2path from c2path_entry
     c2path = c2path_entry.get("1.0", 'end-1c').strip()
     
-    # Iterate over each subject_id, updating paths, but only display paths for the last one
-    for subject_id in subject_ids:
-        new_dwi_path = f"{c2path}/sub-{subject_id}/dwi"
-        new_dwi_process_path = f"{c2path}/sub-{subject_id}/dwi_process"
-        new_anat_process_path = f"{c2path}/sub-{subject_id}/anat_process"
-        new_fsInput_path = f"{c2path}/sub-{subject_id}/anat_process/s1_gnc/sub-{subject_id}_T1w.nii.gz"
-        new_image_to_run_gnc_path = f"{c2path}/sub-{subject_id}/anat/sub-{subject_id}_run-01_T1w.nii.gz"
+    # Initialize the variables with default values
+    new_dwi_path = ""
+    new_dwi_process_path = ""
+    new_anat_process_path = ""
+    new_fsInput_path = ""
+    new_image_to_run_gnc_path = ""
 
-    # Only update the GUI elements with paths for the last subject_id in the loop
+    # Check if there are valid subject IDs
+    if subject_ids and c2path:
+        for subject_id in subject_ids:
+            # Update paths for the current subject
+            new_dwi_path = f"{c2path}/sub-{subject_id}/dwi"
+            new_dwi_process_path = f"{c2path}/sub-{subject_id}/dwi_process"
+            new_anat_process_path = f"{c2path}/sub-{subject_id}/anat_process"
+            new_fsInput_path = f"{c2path}/sub-{subject_id}/anat/sub-{subject_id}_run-02_T1w.nii.gz"
+            new_image_to_run_gnc_path = f"{c2path}/sub-{subject_id}/anat/sub-{subject_id}_run-01_T1w.nii.gz"
+    
+    # Update the GUI elements with paths for the last subject_id
     subj_raw_dir_entry.delete("1.0", 'end')
     subj_raw_dir_entry.insert("1.0", new_dwi_path)
     
@@ -65,7 +74,7 @@ def update_paths(*args):
     anat_process_dir_entry.insert("1.0", new_anat_process_path)
     
     fsInput_entry.delete("1.0", 'end')
-    fsInput_entry.insert("1.0", new_fsInput_path)
+    fsInput_entry.insert("1.0", new_fsInput_path)  
     
     image_to_run_gnc_dir_entry.delete("1.0", 'end')
     image_to_run_gnc_dir_entry.insert("1.0", new_image_to_run_gnc_path)
@@ -223,18 +232,60 @@ def concatenate_nifti_with_mrcat(file_paths, output_file):
     command = ['mrcat'] + file_paths + ['-axis', '3', output_file, '-force']
     subprocess.run(command, check=True)
 
+
+import numpy as np
+
 def concatenate_text_files(file_paths, output_file):
     """
-    Concatenates text files (bvals, bvecs, etc.) into a single file.
-    """
-    concatenated_data = []
-    for file_path in file_paths:
-        with open(file_path, 'r') as file:
-            data = file.read().strip().split()
-            concatenated_data.extend(data)
+    Concatenates the content of multiple text files (e.g., bvals, bvecs, etc.) into a single output file.
+    Handles 1-dimensional and 2-dimensional input data (e.g., bvecs) and concatenates along the first dimension.
+    All files (except bvecs and bvals) are reshaped to (1, N).
     
-    with open(output_file, 'w') as outfile:
-        outfile.write(' '.join(concatenated_data))
+    Parameters:
+    - file_paths: List of file paths to be concatenated.
+    - output_file: The output file where the concatenated data will be written.
+    """
+    try:
+        concatenated_data = []
+
+        # Define file names that are treated differently
+        bvecs_file = "bvec"
+        bvals_file = "bval"
+
+        # Read and process each file
+        for file_path in file_paths:
+            with open(file_path, 'r') as file:
+                # Load data into an array, split lines and then split elements on each line
+                data = [line.strip().split() for line in file.readlines()]
+                
+                # Convert the list of lists into a numpy array
+                data_array = np.array(data, dtype=float)
+
+                # Check the shape of the data and handle it appropriately
+                if bvecs_file in file_path:  # Shape (3, N) for bvecs
+                    concatenated_data.append(data_array)
+                elif bvals_file in file_path:  # Shape (1, N) for bvals
+                    concatenated_data.append(data_array.flatten())
+                else:
+                    # Reshape all other files to (1, N)
+                    concatenated_data.append(data_array.flatten().reshape(1, -1))
+
+        # Concatenate all data along the first dimension
+        concatenated_result = np.concatenate(concatenated_data, axis=1) if concatenated_data[0].ndim == 2 else np.concatenate(concatenated_data)
+
+        # Save the concatenated result to the output file
+        np.savetxt(output_file, concatenated_result, fmt='%g')
+        
+        print(f"Concatenation successful! Output written to {output_file}.")
+    
+    except FileNotFoundError as fnf_error:
+        print(f"Error: One of the files was not found: {fnf_error}")
+    except ValueError as ve:
+        print(f"Error: {ve}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
 
 def concatenate_files(nii_paths, output_base, subject_id):
     """
@@ -719,6 +770,13 @@ def execute_all_steps():
     """
     Sequentially executes all the processing steps, waiting for each to complete before proceeding.
     """
+    def check_dwi_file_entries():
+        """Check if any of the DWI file entries contains a valid path."""
+        for entry in dwi_file_entries:
+            if entry.get("1.0", 'end-1c').strip():  # Check if any entry is not empty
+                return True
+        return False
+    
     def run_step(step_function, next_steps):
         try:
             step_function()  # Execute the step
@@ -729,10 +787,17 @@ def execute_all_steps():
         except Exception as e:
             msgbox.showerror("Error", f"An error occurred during processing: {str(e)}")
 
+    # Determine which concatenate DWI step to include
+    if check_dwi_file_entries():
+        concatenate_step = concatenate_dwi_data_from_gui_entries
+    else:
+        concatenate_step = execute_concatenate_dwi_data
+    
+    # Add execute_recon_all to the list of steps
     steps = [
         execute_dcm2bids,
         execute_export_diffusion_parameters,
-        execute_concatenate_dwi_data,
+        concatenate_step,  # Use the chosen concatenate function
         execute_degibbs,
         execute_topup,
         execute_generate_masks,
@@ -740,10 +805,12 @@ def execute_all_steps():
         execute_gnc_dwi,
         execute_interpolation_eddy_gnc,
         mppca_noise,
-        write_output_to_processed_dwi
+        write_output_to_processed_dwi,
+        execute_recon_all  # Added recon-all to the sequence
     ]
 
     run_step(steps[0], steps[1:])
+
 
 # Function to create a horizontal scrollable entry field with copy/paste functionality
 def make_horizontal_scrollable_entry(parent, width, height):
@@ -1108,7 +1175,7 @@ ttk.Separator(main_frame, orient='horizontal').grid(row=39, columnspan=5, sticky
 tk.Label(main_frame, text="FreeSurfer Input Image:").grid(row=40, column=0, sticky='w')
 fsInput_entry, fsInput_entry_frame = make_horizontal_scrollable_entry(main_frame, width=50, height=1)
 fsInput_entry_frame.grid(row=40, column=1, sticky='ew')
-fsInput_entry.insert("1.0","/autofs/cluster/connectome2/Bay8_C2/bids/sub-011/anat/sub-011_run-01_T1w.nii.gz")
+fsInput_entry.insert("1.0","/autofs/cluster/connectome2/Bay8_C2/bids/sub-011/anat/sub-011_run-02_T1w.nii.gz")
 execute_recon_all_button = ttk.Button(
     main_frame, 
     text="Execute recon-all", 
