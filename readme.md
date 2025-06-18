@@ -1,19 +1,23 @@
 # Diffusion MRI Pre-processing Pipeline
 
-This repository contains a comprehensive pipeline for preprocessing diffusion MRI data. 
+A fully-featured, step-by-step workflow for preparing diffusion MRI (dMRI) datasets for analysis. The pipeline wraps **dcm2bids**, **MRtrix3**, **FSL** (TopUp & Eddy), **FreeSurfer**, and in-house scripts behind a lightweight Python/Qt GUI.
 
-<img width="771" alt="image" src="https://github.com/user-attachments/assets/de90d5e8-03b0-4e97-b7bc-ef2e6863b328">
+<p align="center">
+  <img width="700" alt="Screenshot of the preprocessing GUI" src="https://github.com/user-attachments/assets/de90d5e8-03b0-4e97-b7bc-ef2e6863b328" />
+</p>
 
 ---
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Setup Instructions](#setup-instructions)
+- [Quick Start](#quick-start)
+- [Full Setup](#full-setup)
   - [1. Configure Environment Variables](#1-configure-environment-variables)
-  - [2. Set Up Python Environment](#2-set-up-python-environment)
-- [Running the Pre-processing GUI](#running-the-pre-processing-gui)
-- [Usage Instructions](#usage-instructions)
+  - [2. Create / Activate a Python Environment](#2-create--activate-a-python-environment)
+  - [3. Install Python Dependencies](#3-install-python-dependencies)
+- [Running the GUI](#running-the-gui)
+- [Pipeline Steps](#pipeline-steps)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
@@ -21,100 +25,122 @@ This repository contains a comprehensive pipeline for preprocessing diffusion MR
 
 ## Prerequisites
 
-- **Access to the cluster** (via NoMachine or VNC)
-- **Freesurfer** version 7.4.1 installed 
-- **MRtrix3** version 3.0.3 installed
-- **Miniforge3** for managing Python environments
-- Necessary permissions to edit files and install packages
+| Component | Recommended version | Notes |
+|-----------|--------------------|-------|
+| **FreeSurfer** | 7.4.1 | `recon-all` used at the end of the pipeline |
+| **MRtrix3** | 3.0.3 | Gibbs & MP-PCA modules |
+| **Miniforge** | latest | for managing Conda environments |
+| **FSL** | 6.0+ | provides *topup* & *eddy* |
+| Access to **cluster** (SSH / NoMachine / VNC) and permission to install software |
 
-## Setup Instructions
+> **Tip** Martinos Center users can activate a ready-to-go Conda environment—see [Quick Start](#quick-start).
+
+---
+
+## Quick Start
+
+```bash
+# 1) Locate your session (example)
+findsession MS_C2_001
+
+# 2) Activate the pre-built Conda environment
+source /autofs/space/linen_001/users/Yixin/miniforge3/bin/activate
+conda activate /autofs/space/linen_001/users/Yixin/miniforge3/envs/tractseg_env
+
+# 3) Launch the preprocessing GUI
+cd /autofs/cluster/connectome2/Bay8_C2/bids/code/preprocessing_dwi
+python main.py
+```
+
+Everything you need—GUI plus dependencies—is bundled in that environment, so no further installation is necessary.
+
+---
+
+## Full Setup
 
 ### 1. Configure Environment Variables
 
-Open a terminal on the cluster and edit your `~/.bashrc` file:
+Append the following to `~/.bashrc` (or `~/.zshrc`) and reload the shell:
 
 ```bash
-gedit ~/.bashrc
-
-#Add the following lines to include the necessary toolboxes:
 export PATH="/autofs/cluster/pubsw/2/pubsw/Linux2-2.3-x86_64/packages/mrtrix/3.0.3/bin:$PATH"
 export FREESURFER_HOME="/usr/local/freesurfer/7.4.1"
-export FSFAST_HOME="/usr/local/freesurfer/7.4.1/fsfast"
-export SUBJECTS_DIR="/usr/local/freesurfer/7.4.1/subjects"
-export MNI_DIR="/usr/local/freesurfer/7.4.1/mni"
+export FSFAST_HOME="$FREESURFER_HOME/fsfast"
+export SUBJECTS_DIR="$FREESURFER_HOME/subjects"
+export MNI_DIR="$FREESURFER_HOME/mni"
 source $FREESURFER_HOME/SetUpFreeSurfer.sh
 
+# reload
+source ~/.bashrc
 ```
-### 2. Set Up Python Environment
-In the terminal, execute the following commands to set up a Python environment:
+
+### 2. Create / Activate a Python Environment
+
 ```bash
-# Download the latest Miniforge installer for Linux (64-bit)
+# Download Miniforge (64-bit Linux)
 wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-
-# Make the installer executable
 chmod +x Miniforge3-Linux-x86_64.sh
+./Miniforge3-Linux-x86_64.sh    # accept license, choose install path
 
-# Run the installer (accept the agreement and choose a directory other than the home directory)
-./Miniforge3-Linux-x86_64.sh
+# Initialise Conda once
+<miniforge>/bin/conda init
+exec "$SHELL"   # restart shell so 'conda' is on PATH
 
-# Initialize conda
-{your_chosen_directory}/conda init
-
-# Create python environment
-conda install python3.12
-conda create --name envPy312 python=3.12
-conda activate envPy312
-
-# Install necessary Python packages
-pip install numpy nibabel dcm2bids dcm2niix
+# Create and activate an environment
+conda create -n dmri_py312 python=3.12 -y
+conda activate dmri_py312
 ```
+
+### 3. Install Python Dependencies
+
+```bash
+pip install --upgrade pip
+pip install numpy nibabel dcm2bids dcm2niix PySide6
+```
+
 ---
-## Running the Pre-processing GUI
-Navigate to the pre-processing code directory and run the GUI:
+
+## Running the GUI
+
+If you followed **Full Setup**:
+
 ```bash
 cd /autofs/cluster/connectome2/Bay8_C2/bids/code/preprocessing_dwi
-python run.py
+python main.py
 ```
----
-## Usage instructions
 
-Input Subject Id, C2 Path, Dicom Source
-
-Provide the path obtained from the findsession command in the Dicom Source field.
-Ensure there are no extra spaces or line breaks.
-
-Execute Processing Steps:
-
-Click through the processing steps in order:
-- **Execute dcm2bids**
-- **Export Diffusion Parameters** diffusionTime, pulseWidth, and phaseEncoding files will be exported along with bvecs and bvals
-- **Concatenate DWI Data from entries** (in the order of the wedges)
-- **Gibbs Ringing Removal**
-- **TopUp Correction** (approx. 2 hours)
-- **Generate WM/Brain Masks**
-- **Eddy Current Correction** (approx. 6 hours)
-- **Execute GNC DWI** (gradient non-linearity correction on C1 or C2 scanner)
-- **Combined Eddy GNC Interpolation** (approx. 3 hours)
-- **Generate Noise Map from MP-PCA** (the output file will be necessary for SANDI diffusion model-fitting)
-- **Write Output to derivative/processed_dwi folder**
-- **run FreeSurfer recon-all**
-
-**Additional Notes**
-
-The GUI provides fields to input necessary paths and options.
-Ensure all paths are correct and accessible.
-Monitor the status messages for progress and any potential errors.
+The Qt window lists each preprocessing module in order; click **Run** to advance.
 
 ---
+
+## Pipeline Steps
+
+1. **dcm2bids** – convert raw DICOMs to BIDS.  
+2. **Export Diffusion Parameters** – writes `*_phenc.txt`, `bvecs`, `bvals`, `diffusionTime`, `pulseWidth`.  
+3. **Concatenate DWI** – merge wedges in acquisition order.  
+4. **Gibbs Ringing Removal**  
+5. **TopUp** (≈ 2 h)  
+6. **Mask Generation** – WM & brain masks.  
+7. **Eddy** (≈ 6 h)  
+8. **Gradient Non-linearity Correction (GNC)**  
+9. **Eddy-GNC Interpolation** (≈ 3 h)  
+10. **Noise Map (MP-PCA)** – needed for SANDI model-fitting.  
+11. **Write outputs** to `derivatives/processed_dwi/`  
+12. **FreeSurfer** `recon-all`  
+
+> **Heads-up** Long steps run on the cluster queue—watch the log panel for job IDs and progress.
+
+---
+
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+[MIT](LICENSE)
 
 ---
+
 ## Acknowledgements
-Thanks to the development teams of Freesurfer, MRtrix3, and Miniforge3.
-Special appreciation to the contributors who have made this pipeline possible.
 
-
-
-
-
+- FreeSurfer development team  
+- MRtrix3 contributors  
+- Miniforge / Conda-Forge community  
+- Martinos Center colleagues  
