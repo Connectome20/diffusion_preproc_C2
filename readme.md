@@ -47,11 +47,11 @@ findsession MS_C2_001
 source /autofs/space/linen_001/users/Yixin/miniforge3/bin/activate
 conda activate /autofs/space/linen_001/users/Yixin/miniforge3/envs/tractseg_env
 
-# 4) Source related tools:
+# 3) Source related tools:
 cd /autofs/cluster/connectome2/Bay8_C2/bids/code/preprocessing_dwi
-source dwi_proc_env
+source ~/dwi_proc_env
 
-# 3) Launch the preprocessing GUI 
+# 4) Launch the preprocessing GUI 
 cd /autofs/cluster/connectome2/Bay8_C2/bids/code/preprocessing_dwi
 python main.py
 ```
